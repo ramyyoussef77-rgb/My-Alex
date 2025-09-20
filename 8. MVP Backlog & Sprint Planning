@@ -1,0 +1,231 @@
+8. MVP Backlog & Sprint Planning
+
+Sprint 1 (2 weeks) - Foundation
+
+Goal: Basic app structure, authentication, and location services
+
+User Stories:
+
+As a user, I want to sign in with Google so I can access the app
+
+As a user, I want the app to detect my location so I can see nearby content
+
+As a user, I want to see the main navigation so I can access different features
+
+As a user, I want to switch between Arabic and English languages
+
+Acceptance Criteria:
+
+Google Sign-in integration working
+
+Location permission handling
+
+Basic navigation structure
+
+Language switching functionality
+
+RTL layout support for Arabic
+
+Tasks:
+
+Set up project structure and dependencies
+
+Implement authentication with Firebase Auth
+
+Add location services and permissions
+
+Create main navigation with bottom tabs
+
+Implement localization system
+
+Set up CI/CD pipeline
+
+Sprint 2 (2 weeks) - Chat System
+
+Goal: Neighborhood-based chat rooms
+
+User Stories:
+
+As a user, I want to see nearby chat rooms based on my location
+
+As a user, I want to join a chat room and send messages
+
+As a user, I want to see message history in real-time
+
+As a user, I want inappropriate messages to be filtered
+
+Acceptance Criteria:
+
+Location-based room discovery (5km radius)
+
+Real-time messaging with Firestore
+
+Message moderation system
+
+Offline message caching
+
+Arabic text support in chat
+
+Tasks:
+
+Implement geofencing for chat rooms
+
+Create chat UI with Compose
+
+Set up Firestore real-time listeners
+
+Add message moderation Cloud Function
+
+Implement offline caching with Room
+
+Sprint 3 (2 weeks) - Complaints System
+
+Goal: Crisis and complaint reporting
+
+User Stories:
+
+As a user, I want to report complaints with photos and location
+
+As a user, I want to categorize my complaints
+
+As a user, I want to track the status of my complaints
+
+As an admin, I want to manage and respond to complaints
+
+Acceptance Criteria:
+
+Complaint form with photo upload
+
+GPS location capture
+
+Category selection
+
+Status tracking
+
+Admin dashboard for complaint management
+
+Tasks:
+
+Create complaint submission form
+
+Implement photo upload to Firebase Storage
+
+Add GPS location capture
+
+Create admin web dashboard
+
+Set up complaint escalation system
+
+Sprint 4 (2 weeks) - AI Assistant & News
+
+Goal: AI assistant and news aggregation
+
+User Stories:
+
+As a user, I want to ask questions to an AI assistant
+
+As a user, I want the AI to answer in my preferred language
+
+As a user, I want to see recent news from local Facebook pages
+
+As a user, I want a floating assistant icon for quick access
+
+Acceptance Criteria:
+
+AI assistant with RAG capabilities
+
+Multilingual responses (Arabic/English)
+
+Floating chat head overlay
+
+News aggregation from Facebook pages
+
+Automatic news refresh every 30 minutes
+
+Tasks:
+
+Integrate OpenAI API for AI responses
+
+Implement RAG with local documents
+
+Create floating assistant service
+
+Set up Facebook Graph API integration
+
+Create news feed UI
+
+Sprint 5 (2 weeks) - AR & Historical Places
+
+Goal: AR experience for historical places
+
+User Stories:
+
+As a user, I want to see historical places in AR
+
+As a user, I want to download content for offline viewing
+
+As a user, I want to hear audio guides in my language
+
+As a user, I want to learn about Alexandria's history
+
+Acceptance Criteria:
+
+ARCore integration working
+
+3D models loading in AR
+
+Offline content download
+
+Audio guides in Arabic/English
+
+Historical place information panels
+
+Tasks:
+
+Integrate ARCore and Sceneform
+
+Create 3D models for historical places
+
+Implement offline content system
+
+Add audio guide functionality
+
+Create historical places database
+
+Sprint 6 (2 weeks) - Services & Events
+
+Goal: Local services directory and events calendar
+
+User Stories:
+
+As a user, I want to find local services near me
+
+As a user, I want to contact services via WhatsApp
+
+As a user, I want to see upcoming events
+
+As a user, I want to add events to my calendar
+
+Acceptance Criteria:
+
+Services directory with search and filters
+
+WhatsApp integration for contact
+
+Events calendar with Google Calendar sync
+
+Event creation and management
+
+Push notifications for event reminders
+
+Tasks:
+
+Create services directory UI
+
+Implement WhatsApp deep linking
+
+Add events calendar functionality
+
+Set up Google Calendar integration
+
+Implement push notifications
