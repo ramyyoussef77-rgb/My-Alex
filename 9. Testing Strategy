@@ -1,0 +1,174 @@
+9. Testing Strategy
+
+Unit Tests
+
+// ChatRepositoryTest.kt
+@RunWith(MockitoJUnitRunner::class)
+class ChatRepositoryTest {
+    
+    @Mock
+    private lateinit var firestore: FirebaseFirestore
+    
+    @Mock
+    private lateinit var locationManager: LocationManager
+    
+    private lateinit var chatRepository: ChatRepository
+    
+    @Before
+    fun setup() {
+        chatRepository = ChatRepository(firestore, locationManager)
+    }
+    
+    @Test
+    fun `getNearbyRooms returns rooms within radius`() = runTest {
+        // Given
+        val currentLocation = Location(30.0444, 31.2357) // Alexandria coordinates
+        `when`(locationManager.getCurrentLocation()).thenReturn(currentLocation)
+        
+        val mockRooms = listOf(
+            ChatRoom(id = "1", location = GeoPoint(30.0450, 31.2360)), // ~50m away
+            ChatRoom(id = "2", location = GeoPoint(30.1000, 31.3000))  // ~10km away
+        )
+        
+        // Mock Firestore response
+        val mockTask = mock<Task<QuerySnapshot>>()
+        val mockSnapshot = mock<QuerySnapshot>()
+        val mockDocuments = mockRooms.map { room ->
+            mock<DocumentSnapshot>().apply {
+                `when`(toObject<ChatRoom>()).thenReturn(room)
+            }
+        }
+        
+        `when`(mockSnapshot.documents).thenReturn(mockDocuments)
+        `when`(mockTask.await()).thenReturn(mockSnapshot)
+        `when`(firestore.collection("chatRooms").whereEqualTo("isActive", true).get())
+            .thenReturn(mockTask)
+        
+        // When
+        val result = chatRepository.getNearbyRooms(5000.0).first()
+        
+        // Then
+        assertEquals(1, result.size)
+        assertEquals("1", result[0].id)
+    }
+}
+
+// AIAssistantRepositoryTest.kt
+@RunWith(MockitoJUnitRunner::class)
+class AIAssistantRepositoryTest {
+    
+    @Mock
+    private lateinit var openAIService: OpenAIService
+    
+    @Mock
+    private lateinit var localDocsRepository: LocalDocsRepository
+    
+    private lateinit var aiAssistantRepository: AIAssistantRepository
+    
+    @Before
+    fun setup() {
+        aiAssistantRepository = AIAssistantRepository(openAIService, localDocsRepository)
+    }
+    
+    @Test
+    fun `getResponse returns Arabic response for Arabic query`() = runTest {
+        // Given
+        val query = "ما هي أفضل الأماكن السياحية في الإسكندرية؟"
+        val language = "ar"
+        val mockDocs = listOf(
+            LocalDocument("قلعة قايتباي من أهم المعالم السياحية"),
+            LocalDocument("مكتبة الإسكندرية معلم ثقافي مهم")
+        )
+        val expectedResponse = "أفضل الأماكن السياحية في الإسكندرية تشمل قلعة قايتباي ومكتبة الإسكندرية"
+        
+        `when`(localDocsRepository.searchDocuments(query, language)).thenReturn(mockDocs)
+        `when`(openAIService.generateResponse(any())).thenReturn(expectedResponse)
+        
+        // When
+        val result = aiAssistantRepository.getResponse(query, language)
+        
+        // Then
+        assertEquals(expectedResponse, result)
+        verify(openAIService).generateResponse(argThat { prompt ->
+            prompt.contains("أنت مساعد ذكي لمدينة الإسكندرية")
+        })
+    }
+}
+
+Integration Tests
+
+// ChatIntegrationTest.kt
+@RunWith(AndroidJUnit4::class)
+@HiltAndroidTest
+class ChatIntegrationTest {
+    
+    @get:Rule
+    var hiltRule = HiltAndroidRule(this)
+    
+    @get:Rule
+    var composeTestRule = createComposeRule()
+    
+    @Before
+    fun setup() {
+        hiltRule.inject()
+    }
+    
+    @Test
+    fun chatFlow_sendMessage_messageAppears() {
+        // Launch chat screen
+        composeTestRule.setContent {
+            MyAlexTheme {
+                ChatScreen(navController = rememberNavController())
+            }
+        }
+        
+        // Type and send message
+        composeTestRule.onNodeWithTag("message_input")
+            .performTextInput("Hello, this is a test message")
+        
+        composeTestRule.onNodeWithTag("send_button")
+            .performClick()
+        
+        // Verify message appears
+        composeTestRule.onNodeWithText("Hello, this is a test message")
+            .assertIsDisplayed()
+    }
+}
+
+UI Tests
+
+// ComplaintSubmissionTest.kt
+@RunWith(AndroidJUnit4::class)
+class ComplaintSubmissionTest {
+    
+    @get:Rule
+    var activityRule = ActivityScenarioRule(MainActivity::class.java)
+    
+    @Test
+    fun submitComplaint_withAllFields_success() {
+        // Navigate to complaints
+        onView(withId(R.id.nav_complaints)).perform(click())
+        
+        // Fill complaint form
+        onView(withId(R.id.complaint_title))
+            .perform(typeText("Street light not working"))
+        
+        onView(withId(R.id.complaint_description))
+            .perform(typeText("The street light on Main Street has been broken for a week"))
+        
+        onView(withId(R.id.category_spinner))
+            .perform(click())
+        onView(withText("Infrastructure")).perform(click())
+        
+        // Add photo (mock)
+        onView(withId(R.id.add_photo_button)).perform(click())
+        // Handle camera/gallery intent
+        
+        // Submit complaint
+        onView(withId(R.id.submit_button)).perform(click())
+        
+        // Verify success message
+        onView(withText("Complaint submitted successfully"))
+            .check(matches(isDisplayed()))
+    }
+}
