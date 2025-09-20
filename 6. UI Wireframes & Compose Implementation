@@ -1,0 +1,180 @@
+6. UI Wireframes & Compose Implementation
+
+Main Navigation
+
+// MainNavigation.kt
+@Composable
+fun MainNavigation(
+    navController: NavHostController,
+    startDestination: String = "home"
+) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination
+    ) {
+        composable("home") {
+            HomeScreen(navController)
+        }
+        composable("chat") {
+            ChatScreen(navController)
+        }
+        composable("complaints") {
+            ComplaintsScreen(navController)
+        }
+        composable("ar_places") {
+            ARPlacesScreen(navController)
+        }
+        composable("services") {
+            ServicesScreen(navController)
+        }
+        composable("news") {
+            NewsScreen(navController)
+        }
+        composable("events") {
+            EventsScreen(navController)
+        }
+        composable("gallery") {
+            GalleryScreen(navController)
+        }
+    }
+}
+
+// HomeScreen.kt
+@Composable
+fun HomeScreen(navController: NavController) {
+    val context = LocalContext.current
+    val isRTL = LocalLayoutDirection.current == LayoutDirection.Rtl
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        // Welcome message
+        Text(
+            text = stringResource(R.string.welcome_message),
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = if (isRTL) TextAlign.End else TextAlign.Start
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Quick actions grid
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                QuickActionCard(
+                    title = stringResource(R.string.neighborhood_chat),
+                    icon = Icons.Default.Chat,
+                    onClick = { navController.navigate("chat") }
+                )
+            }
+            item {
+                QuickActionCard(
+                    title = stringResource(R.string.report_complaint),
+                    icon = Icons.Default.Report,
+                    onClick = { navController.navigate("complaints") }
+                )
+            }
+            item {
+                QuickActionCard(
+                    title = stringResource(R.string.historical_places),
+                    icon = Icons.Default.Museum,
+                    onClick = { navController.navigate("ar_places") }
+                )
+            }
+            item {
+                QuickActionCard(
+                    title = stringResource(R.string.local_services),
+                    icon = Icons.Default.Business,
+                    onClick = { navController.navigate("services") }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun QuickActionCard(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+Theme Implementation
+
+// Theme.kt
+@Composable
+fun MyAlexTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+        darkTheme -> DarkColorScheme
+        else -> LightColorScheme
+    }
+    
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = colorScheme.primary.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+        }
+    }
+    
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = if (LocalLayoutDirection.current == LayoutDirection.Rtl) ArabicTypography else Typography,
+        content = content
+    )
+}
+
+// Typography for Arabic support
+val ArabicTypography = Typography(
+    displayLarge = TextStyle(
+        fontFamily = FontFamily(Font(R.font.noto_sans_arabic_regular)),
+        fontWeight = FontWeight.Normal,
+        fontSize = 57.sp,
+        lineHeight = 64.sp,
+        letterSpacing = (-0.25).sp,
+    ),
+    // ... other text styles
+)
