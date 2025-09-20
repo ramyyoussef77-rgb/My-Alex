@@ -1,0 +1,218 @@
+5. Key Feature Implementation
+
+Location-Based Chat Rooms
+
+// ChatRepository.kt
+@Singleton
+class ChatRepository @Inject constructor(
+    private val firestore: FirebaseFirestore,
+    private val locationManager: LocationManager
+) {
+    fun getNearbyRooms(radius: Double = 5000.0): Flow<List<ChatRoom>> = flow {
+        val currentLocation = locationManager.getCurrentLocation()
+        
+        val nearby = firestore.collection("chatRooms")
+            .whereEqualTo("isActive", true)
+            .get()
+            .await()
+            .documents
+            .mapNotNull { it.toObject<ChatRoom>() }
+            .filter { room ->
+                val distance = calculateDistance(
+                    currentLocation.latitude, currentLocation.longitude,
+                    room.location.latitude, room.location.longitude
+                )
+                distance <= radius
+            }
+            
+        emit(nearby)
+    }
+    
+    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val earthRadius = 6371000.0 // meters
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = sin(dLat / 2) * sin(dLat / 2) +
+                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+                sin(dLon / 2) * sin(dLon / 2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return earthRadius * c
+    }
+}
+
+// ChatViewModel.kt
+@HiltViewModel
+class ChatViewModel @Inject constructor(
+    private val chatRepository: ChatRepository,
+    private val userRepository: UserRepository
+) : ViewModel() {
+    
+    private val _nearbyRooms = MutableStateFlow<List<ChatRoom>>(emptyList())
+    val nearbyRooms: StateFlow<List<ChatRoom>> = _nearbyRooms.asStateFlow()
+    
+    private val _messages = MutableStateFlow<List<Message>>(emptyList())
+    val messages: StateFlow<List<Message>> = _messages.asStateFlow()
+    
+    fun loadNearbyRooms() {
+        viewModelScope.launch {
+            chatRepository.getNearbyRooms().collect {
+                _nearbyRooms.value = it
+            }
+        }
+    }
+    
+    fun sendMessage(roomId: String, text: String) {
+        viewModelScope.launch {
+            try {
+                chatRepository.sendMessage(roomId, text)
+            } catch (e: Exception) {
+                // Handle error
+            }
+        }
+    }
+}
+
+AI Assistant with RAG
+
+// AIAssistantRepository.kt
+@Singleton
+class AIAssistantRepository @Inject constructor(
+    private val openAIService: OpenAIService,
+    private val localDocsRepository: LocalDocsRepository
+) {
+    suspend fun getResponse(query: String, language: String): String {
+        // Retrieve relevant documents
+        val relevantDocs = localDocsRepository.searchDocuments(query, language)
+        
+        // Prepare context
+        val context = relevantDocs.joinToString("\n") { it.content }
+        
+        val prompt = if (language == "ar") {
+            """
+            أنت مساعد ذكي لمدينة الإسكندرية. استخدم المعلومات التالية للإجابة على السؤال:
+            
+            السياق: $context
+            
+            السؤال: $query
+            
+            الإجابة:
+            """
+        } else {
+            """
+            You are an AI assistant for Alexandria, Egypt. Use the following information to answer the question:
+            
+            Context: $context
+            
+            Question: $query
+            
+            Answer:
+            """
+        }
+        
+        return openAIService.generateResponse(prompt)
+    }
+}
+
+// FloatingAssistantService.kt
+class FloatingAssistantService : Service() {
+    private lateinit var windowManager: WindowManager
+    private lateinit var floatingView: View
+    
+    override fun onBind(intent: Intent?): IBinder? = null
+    
+    override fun onCreate() {
+        super.onCreate()
+        createFloatingWidget()
+    }
+    
+    private fun createFloatingWidget() {
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        
+        floatingView = LayoutInflater.from(this)
+            .inflate(R.layout.floating_assistant, null)
+        
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT
+        )
+        
+        params.gravity = Gravity.TOP or Gravity.START
+        params.x = 0
+        params.y = 100
+        
+        windowManager.addView(floatingView, params)
+        
+        floatingView.setOnClickListener {
+            // Open AI chat interface
+            val intent = Intent(this, AIAssistantActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(intent)
+        }
+    }
+}
+
+AR Historical Places
+
+// ARHistoricalPlacesFragment.kt
+class ARHistoricalPlacesFragment : Fragment() {
+    private lateinit var arFragment: ArFragment
+    private lateinit var viewModel: ARViewModel
+    
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return inflater.inflate(R.layout.fragment_ar_historical, container, false)
+    }
+    
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        
+        arFragment = childFragmentManager.findFragmentById(R.id.ar_fragment) as ArFragment
+        
+        arFragment.setOnTapArPlaneListener { hitResult, plane, motionEvent ->
+            loadNearbyHistoricalPlaces(hitResult)
+        }
+        
+        viewModel.nearbyPlaces.observe(viewLifecycleOwner) { places ->
+            places.forEach { place ->
+                addARNode(place)
+            }
+        }
+    }
+    
+    private fun addARNode(place: HistoricalPlace) {
+        ModelRenderable.builder()
+            .setSource(requireContext(), Uri.parse(place.arModelUrl))
+            .build()
+            .thenAccept { renderable ->
+                val anchorNode = AnchorNode()
+                val node = TransformableNode(arFragment.transformationSystem)
+                node.renderable = renderable
+                node.setParent(anchorNode)
+                
+                // Add info panel
+                ViewRenderable.builder()
+                    .setView(requireContext(), createInfoPanel(place))
+                    .build()
+                    .thenAccept { viewRenderable ->
+                        val infoNode = Node()
+                        infoNode.renderable = viewRenderable
+                        infoNode.setParent(node)
+                        infoNode.localPosition = Vector3(0f, 1f, 0f)
+                    }
+            }
+    }
+    
+    private fun createInfoPanel(place: HistoricalPlace): View {
+        val view = LayoutInflater.from(requireContext())
+            .inflate(R.layout.ar_info_panel, null)
+        
+        view.findViewById<TextView>(R.id.place_name).text = 
+            if (Locale.getDefault().language == "ar") place.nameAr else place.name
+        view.findViewById<TextView>(R.id.place_description).text = 
+            if (Locale.getDefault().language == "ar") place.descriptionAr else place.description
+            
+        return view
+    }
+}
