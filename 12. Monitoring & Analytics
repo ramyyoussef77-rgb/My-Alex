@@ -1,0 +1,76 @@
+12. Monitoring & Analytics
+
+Firebase Analytics Setup
+
+// AnalyticsManager.kt
+@Singleton
+class AnalyticsManager @Inject constructor() {
+    private val firebaseAnalytics = FirebaseAnalytics.getInstance(context)
+    
+    fun logEvent(eventName: String, parameters: Bundle = Bundle()) {
+        firebaseAnalytics.logEvent(eventName, parameters)
+    }
+    
+    fun logScreenView(screenName: String, screenClass: String) {
+        val bundle = Bundle().apply {
+            putString(FirebaseAnalytics.Param.SCREEN_NAME, screenName)
+            putString(FirebaseAnalytics.Param.SCREEN_CLASS, screenClass)
+        }
+        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
+    }
+    
+    fun logComplaintSubmitted(category: String) {
+        val bundle = Bundle().apply {
+            putString("complaint_category", category)
+        }
+        firebaseAnalytics.logEvent("complaint_submitted", bundle)
+    }
+    
+    fun logChatMessageSent(roomId: String) {
+        val bundle = Bundle().apply {
+            putString("room_id", roomId)
+        }
+        firebaseAnalytics.logEvent("chat_message_sent", bundle)
+    }
+}
+
+// Performance monitoring
+class PerformanceManager @Inject constructor() {
+    private val performance = FirebasePerformance.getInstance()
+    
+    fun startTrace(traceName: String): Trace {
+        return performance.newTrace(traceName).apply { start() }
+    }
+    
+    fun stopTrace(trace: Trace) {
+        trace.stop()
+    }
+}
+
+Crashlytics Setup
+
+// CrashReportingManager.kt
+@Singleton
+class CrashReportingManager @Inject constructor() {
+    private val crashlytics = FirebaseCrashlytics.getInstance()
+    
+    fun logException(exception: Exception) {
+        crashlytics.recordException(exception)
+    }
+    
+    fun setUserId(userId: String) {
+        crashlytics.setUserId(userId)
+    }
+    
+    fun setCustomKey(key: String, value: String) {
+        crashlytics.setCustomKey(key, value)
+    }
+    
+    fun log(message: String) {
+        crashlytics.log(message)
+    }
+}
+
+This comprehensive architecture provides a solid foundation for building "My Alex" with all the requested features. The modular approach ensures maintainability, the bilingual support handles Arabic/English with RTL, and the offline capabilities ensure the app works even with poor connectivity.
+
+Would you like me to elaborate on any specific aspect or provide more detailed implementation for particular features?
