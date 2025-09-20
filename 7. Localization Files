@@ -1,0 +1,99 @@
+7. Localization Files
+
+Arabic Strings (res/values-ar/strings.xml)
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">الإسكندرية</string>
+    <string name="welcome_message">مرحباً بك في الإسكندرية</string>
+    <string name="neighborhood_chat">دردشة الحي</string>
+    <string name="report_complaint">تقديم شكوى</string>
+    <string name="historical_places">الأماكن التاريخية</string>
+    <string name="local_services">الخدمات المحلية</string>
+    <string name="news">الأخبار</string>
+    <string name="events">الفعاليات</string>
+    <string name="gallery">المعرض</string>
+    <string name="settings">الإعدادات</string>
+    
+    <!-- Chat -->
+    <string name="send_message">إرسال رسالة</string>
+    <string name="type_message">اكتب رسالة...</string>
+    <string name="nearby_rooms">الغرف القريبة</string>
+    
+    <!-- Complaints -->
+    <string name="complaint_title">عنوان الشكوى</string>
+    <string name="complaint_description">وصف الشكوى</string>
+    <string name="add_photo">إضافة صورة</string>
+    <string name="submit_complaint">تقديم الشكوى</string>
+    <string name="complaint_categories">فئات الشكاوى</string>
+    <string name="infrastructure">البنية التحتية</string>
+    <string name="safety">الأمان</string>
+    <string name="environment">البيئة</string>
+    <string name="other">أخرى</string>
+    
+    <!-- AI Assistant -->
+    <string name="ai_assistant">المساعد الذكي</string>
+    <string name="ask_question">اسأل سؤالاً...</string>
+    <string name="ai_thinking">المساعد يفكر...</string>
+    
+    <!-- Settings -->
+    <string name="language">اللغة</string>
+    <string name="theme">المظهر</string>
+    <string name="notifications">الإشعارات</string>
+    <string name="privacy">الخصوصية</string>
+    <string name="about">حول التطبيق</string>
+    
+    <!-- Theme options -->
+    <string name="light_theme">فاتح</string>
+    <string name="dark_theme">داكن</string>
+    <string name="auto_theme">تلقائي</string>
+</resources>
+
+English Strings (res/values/strings.xml)
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Alex</string>
+    <string name="welcome_message">Welcome to Alexandria</string>
+    <string name="neighborhood_chat">Neighborhood Chat</string>
+    <string name="report_complaint">Report Complaint</string>
+    <string name="historical_places">Historical Places</string>
+    <string name="local_services">Local Services</string>
+    <string name="news">News</string>
+    <string name="events">Events</string>
+    <string name="gallery">Gallery</string>
+    <string name="settings">Settings</string>
+    
+    <!-- Chat -->
+    <string name="send_message">Send Message</string>
+    <string name="type_message">Type a message...</string>
+    <string name="nearby_rooms">Nearby Rooms</string>
+    
+    <!-- Complaints -->
+    <string name="complaint_title">Complaint Title</string>
+    <string name="complaint_description">Complaint Description</string>
+    <string name="add_photo">Add Photo</string>
+    <string name="submit_complaint">Submit Complaint</string>
+    <string name="complaint_categories">Complaint Categories</string>
+    <string name="infrastructure">Infrastructure</string>
+    <string name="safety">Safety</string>
+    <string name="environment">Environment</string>
+    <string name="other">Other</string>
+    
+    <!-- AI Assistant -->
+    <string name="ai_assistant">AI Assistant</string>
+    <string name="ask_question">Ask a question...</string>
+    <string name="ai_thinking">AI is thinking...</string>
+    
+    <!-- Settings -->
+    <string name="language">Language</string>
+    <string name="theme">Theme</string>
+    <string name="notifications">Notifications</string>
+    <string name="privacy">Privacy</string>
+    <string name="about">About</string>
+    
+    <!-- Theme options -->
+    <string name="light_theme">Light</string>
+    <string name="dark_theme">Dark</string>
+    <string name="auto_theme">Auto</string>
+</resources>
