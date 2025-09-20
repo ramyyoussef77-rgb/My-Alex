@@ -1,0 +1,613 @@
+News Screen Implementation
+
+NewsScreen Compose Implementation
+
+// NewsScreen.kt
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NewsScreen(
+    navController: NavController,
+    viewModel: NewsViewModel = hiltViewModel()
+) {
+    val newsState by viewModel.newsState.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Top App Bar
+        TopAppBar(
+            title = {
+                Text(
+                    text = stringResource(R.string.alexandria_news),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Medium
+                )
+            },
+            navigationIcon = {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu"
+                    )
+                }
+            },
+            actions = {
+                IconButton(onClick = { /* Search functionality */ }) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search"
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        )
+        
+        // Pull to refresh
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.refreshNews() },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            when (newsState) {
+                is NewsState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                is NewsState.Success -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(newsState.articles) { article ->
+                            NewsArticleCard(
+                                article = article,
+                                onClick = { viewModel.openArticle(article) }
+                            )
+                        }
+                    }
+                }
+                is NewsState.Error -> {
+                    ErrorMessage(
+                        message = newsState.message,
+                        onRetry = { viewModel.loadNews() }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NewsArticleCard(
+    article: NewsArticle,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // Article header with source info
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Source avatar
+                AsyncImage(
+                    model = article.sourceAvatar,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(R.drawable.ic_placeholder_avatar)
+                )
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = article.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    
+                    Text(
+                        text = article.sourceName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Article content
+            Text(
+                text = article.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            // Article image if available
+            article.imageUrl?.let { imageUrl ->
+                Spacer(modifier = Modifier.height(12.dp))
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Action button
+            Button(
+                onClick = onClick,
+                modifier = Modifier.align(Alignment.Start),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text(
+                    text = stringResource(R.string.view_full_post),
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ErrorMessage(
+    message: String,
+    onRetry: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Error,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Button(onClick = onRetry) {
+            Text(stringResource(R.string.retry))
+        }
+    }
+}
+
+NewsViewModel
+
+// NewsViewModel.kt
+@HiltViewModel
+class NewsViewModel @Inject constructor(
+    private val newsRepository: NewsRepository,
+    private val analyticsManager: AnalyticsManager
+) : ViewModel() {
+    
+    private val _newsState = MutableStateFlow<NewsState>(NewsState.Loading)
+    val newsState: StateFlow<NewsState> = _newsState.asStateFlow()
+    
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    
+    init {
+        loadNews()
+    }
+    
+    fun loadNews() {
+        viewModelScope.launch {
+            _newsState.value = NewsState.Loading
+            try {
+                val articles = newsRepository.getLatestNews()
+                _newsState.value = NewsState.Success(articles)
+                analyticsManager.logEvent("news_loaded", Bundle().apply {
+                    putInt("article_count", articles.size)
+                })
+            } catch (e: Exception) {
+                _newsState.value = NewsState.Error(
+                    e.message ?: "Failed to load news"
+                )
+                analyticsManager.logException(e)
+            }
+        }
+    }
+    
+    fun refreshNews() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                val articles = newsRepository.refreshNews()
+                _newsState.value = NewsState.Success(articles)
+                analyticsManager.logEvent("news_refreshed")
+            } catch (e: Exception) {
+                _newsState.value = NewsState.Error(
+                    e.message ?: "Failed to refresh news"
+                )
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+    
+    fun openArticle(article: NewsArticle) {
+        analyticsManager.logEvent("news_article_opened", Bundle().apply {
+            putString("article_id", article.id)
+            putString("source", article.sourceName)
+        })
+        
+        // Open article in browser or in-app browser
+        // Implementation depends on your preference
+    }
+}
+
+sealed class NewsState {
+    object Loading : NewsState()
+    data class Success(val articles: List<NewsArticle>) : NewsState()
+    data class Error(val message: String) : NewsState()
+}
+
+NewsRepository with Facebook Integration
+
+// NewsRepository.kt
+@Singleton
+class NewsRepository @Inject constructor(
+    private val facebookApiService: FacebookApiService,
+    private val newsDao: NewsDao,
+    private val preferencesManager: PreferencesManager
+) {
+    
+    private val facebookPageIds = listOf(
+        "1CuNA8fLsW", "19FucQXpny", "14GTdbckaVK",
+        "1B981DguFm", "17AVC5M4Uk", "1CFFKVd3jz", "16mFj19vcE"
+    )
+    
+    suspend fun getLatestNews(): List<NewsArticle> {
+        return try {
+            // Try to get fresh data from API
+            val freshArticles = fetchFromFacebook()
+            if (freshArticles.isNotEmpty()) {
+                // Cache the fresh data
+                newsDao.insertArticles(freshArticles.map { it.toEntity() })
+                freshArticles
+            } else {
+                // Fallback to cached data
+                newsDao.getAllArticles().map { it.toDomain() }
+            }
+        } catch (e: Exception) {
+            // Return cached data on error
+            newsDao.getAllArticles().map { it.toDomain() }
+        }
+    }
+    
+    suspend fun refreshNews(): List<NewsArticle> {
+        val articles = fetchFromFacebook()
+        newsDao.clearAndInsert(articles.map { it.toEntity() })
+        return articles
+    }
+    
+    private suspend fun fetchFromFacebook(): List<NewsArticle> {
+        val allArticles = mutableListOf<NewsArticle>()
+        
+        facebookPageIds.forEach { pageId ->
+            try {
+                val response = facebookApiService.getPagePosts(
+                    pageId = pageId,
+                    fields = "id,message,created_time,permalink_url,attachments{media{image{src}}},from{name,picture}",
+                    limit = 4
+                )
+                
+                val articles = response.data.map { post ->
+                    NewsArticle(
+                        id = post.id,
+                        title = extractTitle(post.message),
+                        description = post.message,
+                        sourceName = post.from.name,
+                        sourceAvatar = post.from.picture.data.url,
+                        imageUrl = post.attachments?.data?.firstOrNull()?.media?.firstOrNull()?.image?.src,
+                        publishedAt = parseDate(post.createdTime),
+                        url = post.permalinkUrl,
+                        sourcePageId = pageId
+                    )
+                }
+                
+                allArticles.addAll(articles)
+            } catch (e: Exception) {
+                // Log error but continue with other pages
+                Log.e("NewsRepository", "Error fetching from page $pageId", e)
+            }
+        }
+        
+        return allArticles.sortedByDescending { it.publishedAt }
+    }
+    
+    private fun extractTitle(message: String): String {
+        // Extract first sentence or first 50 characters as title
+        val firstSentence = message.split('.', '!', '?').firstOrNull()?.trim()
+        return when {
+            firstSentence.isNullOrBlank() -> message.take(50) + "..."
+            firstSentence.length > 80 -> firstSentence.take(80) + "..."
+            else -> firstSentence
+        }
+    }
+    
+    private fun parseDate(dateString: String): Long {
+        return try {
+            val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.getDefault())
+            formatter.parse(dateString)?.time ?: System.currentTimeMillis()
+        } catch (e: Exception) {
+            System.currentTimeMillis()
+        }
+    }
+}
+
+// FacebookApiService.kt
+interface FacebookApiService {
+    @GET("{page-id}/posts")
+    suspend fun getPagePosts(
+        @Path("page-id") pageId: String,
+        @Query("access_token") accessToken: String = BuildConfig.FACEBOOK_ACCESS_TOKEN,
+        @Query("fields") fields: String,
+        @Query("limit") limit: Int = 4
+    ): FacebookPostsResponse
+}
+
+// Data classes for Facebook API
+data class FacebookPostsResponse(
+    val data: List<FacebookPost>
+)
+
+data class FacebookPost(
+    val id: String,
+    val message: String,
+    @SerializedName("created_time") val createdTime: String,
+    @SerializedName("permalink_url") val permalinkUrl: String,
+    val attachments: FacebookAttachments?,
+    val from: FacebookPage
+)
+
+data class FacebookAttachments(
+    val data: List<FacebookAttachment>
+)
+
+data class FacebookAttachment(
+    val media: List<FacebookMedia>
+)
+
+data class FacebookMedia(
+    val image: FacebookImage
+)
+
+data class FacebookImage(
+    val src: String
+)
+
+data class FacebookPage(
+    val name: String,
+    val picture: FacebookPicture
+)
+
+data class FacebookPicture(
+    val data: FacebookPictureData
+)
+
+data class FacebookPictureData(
+    val url: String
+)
+
+Room Database for Offline Caching
+
+// NewsEntity.kt
+@Entity(tableName = "news_articles")
+data class NewsEntity(
+    @PrimaryKey val id: String,
+    val title: String,
+    val description: String,
+    val sourceName: String,
+    val sourceAvatar: String,
+    val imageUrl: String?,
+    val publishedAt: Long,
+    val url: String,
+    val sourcePageId: String,
+    val cachedAt: Long = System.currentTimeMillis()
+)
+
+// NewsDao.kt
+@Dao
+interface NewsDao {
+    @Query("SELECT * FROM news_articles ORDER BY publishedAt DESC")
+    suspend fun getAllArticles(): List<NewsEntity>
+    
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertArticles(articles: List<NewsEntity>)
+    
+    @Query("DELETE FROM news_articles")
+    suspend fun clearAll()
+    
+    @Transaction
+    suspend fun clearAndInsert(articles: List<NewsEntity>) {
+        clearAll()
+        insertArticles(articles)
+    }
+    
+    @Query("DELETE FROM news_articles WHERE cachedAt < :timestamp")
+    suspend fun deleteOldArticles(timestamp: Long)
+}
+
+Domain Model
+
+// NewsArticle.kt
+data class NewsArticle(
+    val id: String,
+    val title: String,
+    val description: String,
+    val sourceName: String,
+    val sourceAvatar: String,
+    val imageUrl: String?,
+    val publishedAt: Long,
+    val url: String,
+    val sourcePageId: String
+)
+
+// Extension functions for mapping
+fun NewsEntity.toDomain(): NewsArticle {
+    return NewsArticle(
+        id = id,
+        title = title,
+        description = description,
+        sourceName = sourceName,
+        sourceAvatar = sourceAvatar,
+        imageUrl = imageUrl,
+        publishedAt = publishedAt,
+        url = url,
+        sourcePageId = sourcePageId
+    )
+}
+
+fun NewsArticle.toEntity(): NewsEntity {
+    return NewsEntity(
+        id = id,
+        title = title,
+        description = description,
+        sourceName = sourceName,
+        sourceAvatar = sourceAvatar,
+        imageUrl = imageUrl,
+        publishedAt = publishedAt,
+        url = url,
+        sourcePageId = sourcePageId
+    )
+}
+
+Background Sync with WorkManager
+
+// NewsSyncWorker.kt
+@HiltWorker
+class NewsSyncWorker @AssistedInject constructor(
+    @Assisted context: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val newsRepository: NewsRepository
+) : CoroutineWorker(context, workerParams) {
+    
+    override suspend fun doWork(): Result {
+        return try {
+            newsRepository.refreshNews()
+            Result.success()
+        } catch (e: Exception) {
+            if (runAttemptCount < 3) {
+                Result.retry()
+            } else {
+                Result.failure()
+            }
+        }
+    }
+    
+    @AssistedFactory
+    interface Factory {
+        fun create(context: Context, params: WorkerParameters): NewsSyncWorker
+    }
+}
+
+// Schedule periodic sync
+class NewsWorkScheduler @Inject constructor(
+    private val workManager: WorkManager
+) {
+    fun schedulePeriodicSync() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        
+        val syncRequest = PeriodicWorkRequestBuilder<NewsSyncWorker>(
+            30, TimeUnit.MINUTES
+        )
+            .setConstraints(constraints)
+            .build()
+        
+        workManager.enqueueUniquePeriodicWork(
+            "news_sync",
+            ExistingPeriodicWorkPolicy.KEEP,
+            syncRequest
+        )
+    }
+}
+
+Updated String Resources
+
+<!-- res/values/strings.xml -->
+<string name="alexandria_news">Alexandria News</string>
+<string name="view_full_post">View Full Post</string>
+<string name="retry">Retry</string>
+<string name="pull_to_refresh">Pull to refresh</string>
+<string name="no_news_available">No news available</string>
+<string name="news_load_error">Failed to load news</string>
+
+<!-- res/values-ar/strings.xml -->
+<string name="alexandria_news">أخبار الإسكندرية</string>
+<string name="view_full_post">عرض المنشور كاملاً</string>
+<string name="retry">إعادة المحاولة</string>
+<string name="pull_to_refresh">اسحب للتحديث</string>
+<string name="no_news_available">لا توجد أخبار متاحة</string>
+<string name="news_load_error">فشل في تحميل الأخبار</string>
+
+This implementation matches the design shown in your screenshot and provides:
+
+Clean UI matching your design with proper spacing and typography
+
+Facebook API integration to fetch posts from the specified pages
+
+Offline caching with Room database
+
+Pull-to-refresh functionality
+
+Background sync every 30 minutes using WorkManager
+
+Error handling with retry functionality
+
+Analytics tracking for user interactions
+
+Bilingual support for Arabic and English
+
+Proper image loading with Coil
+
+Material 3 design with proper theming
+
+The news feed will automatically refresh every 30 minutes and cache content for offline viewing, ensuring users always have access to the latest Alexandria news even with poor connectivity.
