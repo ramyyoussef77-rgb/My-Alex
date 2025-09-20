@@ -1,0 +1,86 @@
+10. Accessibility Checklist
+
+Content Accessibility
+
+All images have meaningful content descriptions
+
+Text has sufficient color contrast (4.5:1 for normal text, 3:1 for large text)
+
+Text can be resized up to 200% without loss of functionality
+
+Touch targets are at least 48dp in size
+
+Content is accessible via keyboard navigation
+
+Screen Reader Support
+
+All interactive elements have appropriate labels
+
+Content is announced in logical order
+
+State changes are announced (loading, errors, success)
+
+Arabic content is properly announced with RTL support
+
+Implementation
+
+// Accessibility helpers
+@Composable
+fun AccessibleButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .semantics {
+                if (contentDescription != null) {
+                    this.contentDescription = contentDescription
+                }
+                role = Role.Button
+            }
+            .heightIn(min = 48.dp)
+    ) {
+        Text(text)
+    }
+}
+
+@Composable
+fun AccessibleTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false,
+    errorMessage: String? = null
+) {
+    Column(modifier = modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            isError = isError,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics {
+                    if (errorMessage != null && isError) {
+                        error(errorMessage)
+                    }
+                }
+        )
+        
+        if (isError && errorMessage != null) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.semantics {
+                    role = Role.Text
+                    liveRegion = LiveRegionMode.Polite
+                }
+            )
+        }
+    }
+}
