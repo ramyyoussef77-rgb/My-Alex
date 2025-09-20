@@ -1,0 +1,182 @@
+3. Database Schema
+
+Firestore Collections
+
+// Users Collection
+users/{userId} {
+  email: string,
+  displayName: string,
+  photoUrl: string,
+  location: GeoPoint,
+  neighborhoods: string[],
+  preferences: {
+    language: "ar" | "en",
+    theme: "light" | "dark" | "auto",
+    notifications: boolean
+  },
+  createdAt: timestamp,
+  lastSeen: timestamp,
+  isActive: boolean,
+  moderationFlags: number
+}
+
+// Neighborhoods Collection
+neighborhoods/{neighborhoodId} {
+  name: { ar: string, en: string },
+  bounds: GeoPoint[],
+  center: GeoPoint,
+  radius: number,
+  memberCount: number,
+  createdAt: timestamp,
+  isActive: boolean
+}
+
+// Chat Rooms Collection
+chatRooms/{roomId} {
+  neighborhoodId: string,
+  name: { ar: string, en: string },
+  description: { ar: string, en: string },
+  memberCount: number,
+  lastMessage: {
+    text: string,
+    senderId: string,
+    timestamp: timestamp
+  },
+  createdAt: timestamp,
+  isActive: boolean
+}
+
+// Messages Subcollection
+chatRooms/{roomId}/messages/{messageId} {
+  senderId: string,
+  text: string,
+  type: "text" | "image" | "location",
+  mediaUrl?: string,
+  location?: GeoPoint,
+  timestamp: timestamp,
+  isModerated: boolean,
+  moderationReason?: string
+}
+
+// Complaints Collection
+complaints/{complaintId} {
+  userId: string,
+  title: { ar: string, en: string },
+  description: { ar: string, en: string },
+  category: "infrastructure" | "safety" | "environment" | "other",
+  location: GeoPoint,
+  address: string,
+  photos: string[],
+  status: "pending" | "in_progress" | "resolved" | "rejected",
+  priority: "low" | "medium" | "high" | "critical",
+  assignedTo?: string,
+  createdAt: timestamp,
+  updatedAt: timestamp,
+  escalationLevel: number
+}
+
+// Historical Places Collection
+historicalPlaces/{placeId} {
+  name: { ar: string, en: string },
+  description: { ar: string, en: string },
+  location: GeoPoint,
+  photos: string[],
+  arModelUrl?: string,
+  audioGuideUrl?: { ar: string, en: string },
+  category: string,
+  period: string,
+  isActive: boolean,
+  offlineContent: {
+    downloaded: boolean,
+    size: number,
+    lastUpdated: timestamp
+  }
+}
+
+// Services Collection
+services/{serviceId} {
+  name: { ar: string, en: string },
+  description: { ar: string, en: string },
+  category: string,
+  subcategory: string,
+  location: GeoPoint,
+  address: string,
+  phone: string,
+  whatsapp?: string,
+  website?: string,
+  photos: string[],
+  rating: number,
+  reviewCount: number,
+  hours: {
+    [day]: { open: string, close: string, closed: boolean }
+  },
+  submittedBy: string,
+  verificationStatus: "pending" | "verified" | "rejected",
+  createdAt: timestamp
+}
+
+// Events Collection
+events/{eventId} {
+  title: { ar: string, en: string },
+  description: { ar: string, en: string },
+  location: GeoPoint,
+  address: string,
+  startTime: timestamp,
+  endTime: timestamp,
+  category: string,
+  organizer: string,
+  maxAttendees?: number,
+  currentAttendees: number,
+  photos: string[],
+  isPublic: boolean,
+  createdBy: string,
+  createdAt: timestamp
+}
+
+// News Cache Collection
+newsCache/{sourceId} {
+  sourceName: string,
+  posts: [{
+    id: string,
+    message: string,
+    createdTime: timestamp,
+    permalink: string,
+    attachments?: {
+      media: [{
+        image: { src: string },
+        type: string
+      }]
+    }
+  }],
+  lastFetched: timestamp,
+  nextFetch: timestamp
+}
+
+Local Room Database
+
+// Local caching for offline capability
+@Entity(tableName = "cached_messages")
+data class CachedMessage(
+    @PrimaryKey val id: String,
+    val roomId: String,
+    val senderId: String,
+    val text: String,
+    val timestamp: Long,
+    val isSynced: Boolean = false
+)
+
+@Entity(tableName = "offline_places")
+data class OfflinePlace(
+    @PrimaryKey val id: String,
+    val name: String,
+    val nameAr: String,
+    val description: String,
+    val descriptionAr: String,
+    val latitude: Double,
+    val longitude: Double,
+    val category: String,
+    val photos: String, // JSON array
+    val arModelPath: String?,
+    val audioGuidePath: String?,
+    val isDownloaded: Boolean = false
+)
